@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "CityBrowser",
-    "slug": "CityBrowser",
+    "name": "PhotographyApp",
+    "slug": "PhotographyApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./images/icon.png",
+    "icon": "./images/CoverPhoto.jpg",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./images/icon.png",
+      "image": "./images/CoverPhoto.jpg",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
