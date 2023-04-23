@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, Image } from 'react-native';
-import { Linking } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import SamScott from './images/SamScot.jpg';
 import MiniTan from './images/MiniTanTan.jpg';
