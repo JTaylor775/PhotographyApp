@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, Image, Pressable } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import SamScott from './images/SamScot.jpg';
 import MiniTan from './images/MiniTanTan.jpg';
@@ -11,12 +11,60 @@ import PMustang1 from './images/Parker1.jpg';
 import PMustang2 from './images/Parker2.jpg';
 import PMustang3 from './images/Parker3.jpg';
 import Button from './Button';
-import { createDrawerNavigator } from '@react-navigation/drawer';
+import { createDrawerNavigator, useDrawerStatus } from '@react-navigation/drawer';
 import { NavigationContainer } from '@react-navigation/native';
 import * as SplashScreen from 'expo-splash-screen';
 import { ScrollView, TextInput } from 'react-native-gesture-handler';
+import * as SQLite from "expo-sqlite";
 
 const Drawer = createDrawerNavigator();
+
+function openDatabase() {
+  if (Platform.OS === "web") {
+    return {
+      transaction: () => {
+        return {
+          executeSql: () => {},
+        };
+      },
+    };
+  }
+  const db = SQLite.openDatabase("db.db")
+  return db;
+}
+
+const db = openDatabase();
+
+export default function App() {
+  const [forceUpdate, forceUpdateId] = useForceUpdate();
+
+  function UserEntries({ keyId }) {
+    const [userEntry, setUserEntry] = useState(null);
+
+    useEffect(() => {
+      db.transaction((tx) => {
+        tx.executeSql(
+          `select * from userEntries order by id desc;`,
+          null,
+          (_, { rows: { _array } }) => setUserEntry(_array)
+        );
+      });
+    }, []);
+
+    if (userEntry === null || userEntry.length === 0) {
+      return null;
+    }
+
+    return (
+      <View key={keyId}> 
+        {userEntry.map(({ id, firstName, lastName, email, subject }) => (
+          <Text style={styles.textW} key={id}>Name:{firstName} {lastName} {'\n'}
+          Email: {email} {'\n'}
+          Subject: {subject} {'\n'}</Text>
+        ))}
+      </View>
+    )
+  }
 
 function HomePage({ button, index }) {
   return (
@@ -102,19 +150,74 @@ function Form({ index }) {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [subject, setSubject] = useState("");
-  const [textBox, setTextBox] = useState(false);
+  let isValid = false;
+
+  function isDataValid() {
+    if(firstName === ""){
+      alert("First name has not been entered.")
+      return false;
+    }
+    else if(lastName === ""){
+      alert("Last name has not been entered.")
+      return false;
+    }
+    else if(lastName === ""){
+      alert("Last name has not been entered.")
+      return false;
+    }
+    else if(email === ""){
+      alert("Email has not been entered.")
+      return false;
+    }
+    else if(subject === ""){
+      alert("Subject has not been entered.")
+      return false;
+    }
+
+    isValid = true;
+
+      try {
+        add();
+        alert("Thank you " + firstName + " " + lastName);
+      } catch (error) {
+        alert('There was an error while saving the data');
+      }
+      return true;
+    }
+
+  useEffect(() => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        "create table if not exists userEntries (id integer primary key not null, firstName r eal, lastName real, email real, subject real);"
+      );
+    });
+  }, 
+  []);
+
+  const add = () => {
+    db.transaction(
+      (tx) => {
+        tx.executeSql("insert into userEntries (firstName, lastName, email, subject) values (?, ?, ?, ?)",[firstName, lastName, email, subject]);
+        tx.executeSql(`select * from userEntries;`, [], (_, { rows }) =>
+          console.log(JSON.stringify(rows))
+        );
+      },
+      null,
+      forceUpdate
+    );
+  };
 
   return (
     <View style={styles.container}>
-      <ScrollView>
-        {textBox === false ? <Text></Text> : <Text style={styles.displayName}>Thank you {firstName} {lastName}!</Text>}
+      <ScrollView keyboardShouldPersistTaps='handled'>
+        {isValid == false ? <Text></Text> : <Text style={styles.displayName}>Thank you {firstName} {lastName}!</Text>}
         <Image style={styles.image} source={Me} />
         <Text style={styles.textW}>First Name:</Text>
         <TextInput
           style={styles.input}
           onChangeText={firstName => setFirstName(firstName)}
           defaultValue={firstName}
-          placeholder="First name" />
+          placeholder={"First name"} />
         <Text style={styles.textW}>Last Name:</Text>
         <TextInput
           style={styles.input}
@@ -130,30 +233,28 @@ function Form({ index }) {
           style={styles.input}
           onChangeText={subject => setSubject(subject)}
           placeholder="Ex. Car, person, dog, etc" />
-        <Button
-          info style={styles.button}
-          key={index}
-          onPress={() => setTextBox(true)}
-        >
-          <Text style={styles.textB}>Submit</Text>
-        </Button>
+        <Pressable 
+            style={styles.button}
+            onPress={() => isDataValid()}
+          >
+            <Text style={styles.buttonText}>Submit</Text>
+          </Pressable>
       </ScrollView>
     </View>
   );
 }
 
-function ClientDisplay({ index }) {
-  return (
+function ClientDisplay() {
+    return (
     <View style={styles.container}>
       <ScrollView>
-        <Text style={styles.displayName}>This is where I will display everyone from the database who has entered their information.</Text>
+        <Text style={styles.displayName}>Possible Client List</Text>
+        <UserEntries key={forceUpdateId} keyId={forceUpdateId}/>
         <Image style={styles.image} source={Me} />
       </ScrollView>
     </View>
   );
 }
-
-export default function App() {
 
   SplashScreen.preventAutoHideAsync();
   setTimeout(SplashScreen.hideAsync, 2000);
@@ -170,7 +271,10 @@ export default function App() {
   );
 }
 
-
+function useForceUpdate() {
+  const [val, setVal] = useState(0);
+  return [() => setVal(val + 1), val];
+}
 
 const styles = StyleSheet.create({
   container: {
